@@ -24,8 +24,7 @@ class CNN(nn.Module):
       feature = self.maxpool(feature)
       feature = feature.view(-1, self.dim_out) #B, dim_out
       return feature
-# ZPI * Spatial GC Layer || ZPI * Feature Transformation (on Temporal Features)
-# with less parameters
+
 class SpatioTemporalGCN(nn.Module):
     def __init__(self, dim_in, hidden_dim, window_len, link_len, embed_dim):
         super(SpatioTemporalGCN, self).__init__()
@@ -40,7 +39,6 @@ class SpatioTemporalGCN(nn.Module):
         self.T = nn.Parameter(torch.FloatTensor(window_len))
         self.ln1 = torch.nn.LayerNorm(int(hidden_dim/2))
         self.ln2 = torch.nn.LayerNorm(int(hidden_dim/2))
-#        self.cnn = CNN(int(hidden_dim/ 2))
 
 
     def forward(self, x, x_window, node_embeddings):
@@ -49,7 +47,6 @@ class SpatioTemporalGCN(nn.Module):
            node_num :  N, E
         '''
         (batch_size, lag, node_num, dim) = x_window.shape
-        #S1: Graph construction, a suggestion is to pre-process graph, however since wildfire requires ~1TB for pre-processing graph we create it from fly
          
         #S2: Laplacian construction
         supports = F.softmax(F.relu(torch.mm(node_embeddings, node_embeddings.transpose(0, 1))), dim=1)
@@ -73,17 +70,11 @@ class SpatioTemporalGCN(nn.Module):
         x_w = x_w.permute(0, 2, 3, 1)  #B, N, hidden_dim/2, T 
         x_wconv = torch.matmul(x_w, self.T)  #B, N, hidden_dim/2: on T
 #        #S6: Transform graph information to [hidden_dim/2, hidden_dim/2] 
-    #    xemb = torch.einsum('bnf,ne->bef', x, node_embeddings).contiguous() #B, E, F
-    #    graph_embed = torch.cdist(xemb, xemb, p=2.0)  #B, E, E
-    #    graph_embed = 1.0 - (graph_embed/torch.max(graph_embed)) #B, E, E
-    #    graph_embed = torch.unsqueeze(graph_embed, 1)
-    #    graph_embed = self.cnn(graph_embed)
         x_tgconv = self.ln1(x_gconv) #x_gconv # torch.einsum('bno,bo->bno',x_gconv, graph_embed) #B, N, H/2
         x_twconv = self.ln2(x_wconv) #torch.einsum('bno,bo->bno',x_wconv, graph_embed) #B, N, H/2
 
 #        #S7: combination operation
         x_gwconv = torch.cat([x_tgconv, x_twconv], dim = -1) + bias #B, N, hidden_dim
-#        x_gwconv = torch.cat([torch.randn(x_twconv.shape), x_twconv], dim=-1)
         return x_gwconv
 
 class GCN_GRU_Cell(nn.Module):
@@ -176,8 +167,6 @@ class GCN(nn.Module):
       self.ln1 = torch.nn.LayerNorm(self.input_dim)
       self.node_embeddings = nn.Parameter(torch.randn(self.num_nodes, self.embed_dim), requires_grad=True)
       self.encoder = GCN_GRU(self.num_nodes, self.input_dim, self.hidden_dim, self.link_len, self.embed_dim, self.num_layers, self.window_len)
-        #predictor
-#      self.end_conv = nn.Conv2d(1, self.horizon * self.output_dim, kernel_size=(self.num_nodes, self.hidden_dim), bias=True)
 
         # fully-connected part
       kernel_size=3
@@ -202,11 +191,6 @@ class GCN(nn.Module):
       x = self.ln1(x)
       x, _ = self.encoder(x, self.node_embeddings) #B, T, N, hidden_dim
       x = x[0][:, -1:, :, :] #B, 1, N, hidden_dim
-#      #CNN based predictor
-#      x = self.end_conv((x)) #B, T*C, N, 1
-#      x = x.squeeze(-1).reshape(-1, self.output_dim)
-#      return torch.nn.functional.log_softmax(x, dim=-1)
-#      print(x[0,...],"<===")
       x = self.ln2(x)
       x = x.squeeze(1).permute(0,2,1) # B, hidden_dim, N
       x = x.reshape(B, self.hidden_dim, self.patch_width, self.patch_height)
