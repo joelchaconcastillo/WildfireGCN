@@ -41,7 +41,6 @@ args.add_argument('--model', default=MODEL, type=str)
 args.add_argument('--cuda', default=True, type=bool)
 # from data, these below information could be found in .conf file
 #data
-args.add_argument('--lag', default=config['data']['lag'], type=int)
 args.add_argument('--horizon', default=config['data']['horizon'], type=int)
 args.add_argument('--num_nodes', default=config['data']['num_nodes'], type=int)
 args.add_argument('--default_graph', default=config['data']['default_graph'], type=eval)
@@ -61,7 +60,6 @@ args.add_argument('--embed_dim', default=config['model']['embed_dim'], type=int)
 args.add_argument('--rnn_units', default=config['model']['rnn_units'], type=int)
 args.add_argument('--num_layers', default=config['model']['num_layers'], type=int)
 args.add_argument('--link_len', default=config['model']['link_len'], type=int)
-args.add_argument('--gamma', default=config['model']['gamma'], type=float)
 args.add_argument('--window_len', default=config['model']['window_len'], type=int)
 args.add_argument('--weight_decay', default=config['model']['weight_decay'], type=float)
 #train
